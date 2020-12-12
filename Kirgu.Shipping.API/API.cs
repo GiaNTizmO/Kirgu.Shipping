@@ -13,6 +13,8 @@ namespace Kirgu.Shipping.API
     // Класс-обработчик клиента
     internal class Client
     {
+        public static string[] credentials = new string[2];
+
         // Отправка страницы с ошибкой
         private void SendError(TcpClient Client, int Code)
         {
@@ -20,15 +22,50 @@ namespace Kirgu.Shipping.API
             // HttpStatusCode хранит в себе все статус-коды HTTP/1.1
             string CodeStr = Code.ToString() + " " + ((HttpStatusCode)Code).ToString();
             // Код простой HTML-странички
-            string Html = "<html><body><h1>" + CodeStr + "</h1></body></html>";
+            string Html = "{\"status\" : " + "\"" + CodeStr + "\"}";
             // Необходимые заголовки: ответ сервера, тип и длина содержимого. После двух пустых строк - само содержимое
-            string Str = "HTTP/1.1 " + CodeStr + "\nContent-type: application/json\nContent-Length:" + Html.Length.ToString() + "\n\n" + Html;
+            string Str = "HTTP/1.1 " + CodeStr + "\nContent-type: application/text\nContent-Length:" + Html.Length.ToString() + "\n\n" + Html;
             // Приведем строку к виду массива байт
             byte[] Buffer = Encoding.ASCII.GetBytes(Str);
             // Отправим его клиенту
             Client.GetStream().Write(Buffer, 0, Buffer.Length);
             // Закроем соединение
             Client.Close();
+        }
+
+        private void Send(TcpClient Client, string msg, bool status)
+        {
+            string Html = "";
+            if (status == false)
+            {
+                if (String.IsNullOrEmpty(msg))
+                {
+                    Html = "{\"success\" : false }";
+                }
+                else if (!String.IsNullOrEmpty(msg))
+                {
+                    Html = "{\"success\" : false , \"message\" : \"" + msg + "\"}";
+                }
+            }
+            Html = "{\"success\" : true , " + msg + "\"}";
+            // Необходимые заголовки: ответ сервера, тип и длина содержимого. После двух пустых строк - само содержимое
+            string Str = "HTTP/1.1 " + "200" + "\nContent-type: application/json\nContent-Length:" + Html.Length.ToString() + "\n\n" + Html;
+            // Приведем строку к виду массива байт
+            byte[] Buffer = Encoding.ASCII.GetBytes(Str);
+            // Отправим его клиенту
+            Client.GetStream().Write(Buffer, 0, Buffer.Length);
+            // Закроем соединение
+            Client.Close();
+        }
+
+        public static string[] AuthParser(string authStr)
+        {
+            string[] Raw = authStr.Split('&');
+            string[] Login = Raw[0].Split('=');
+            string[] Password = Raw[1].Split('=');
+            credentials[0] = Login[1];
+            credentials[1] = Password[1];
+            return credentials;
         }
 
         // Конструктор класса. Ему нужно передавать принятого клиента от TcpListener
@@ -83,12 +120,23 @@ namespace Kirgu.Shipping.API
             }
 
             // Если строка запроса оканчивается на "/", то добавим к ней index.html
+            //---   ROUTER    ---//
             if (RequestUri.EndsWith("/"))
             {
-                RequestUri += "index.html";
+                Send(Client, "", false);
+            }
+            else if (RequestUri.EndsWith("/testerr"))
+            {
+                Send(Client, "test error", false);
+            }
+            else if (RequestUri.StartsWith("/auth="))
+            {
+                Logger.WriteLine("Auth packet recieved!");
+                AuthParser(RequestUri);
+                Send(Client, "Hello " + credentials[0], true);
             }
 
-            string FilePath = "www/" + RequestUri;
+            /*string FilePath = "www/" + RequestUri;
 
             // Если в папке www не существует данного файла, посылаем ошибку 404
             if (!File.Exists(FilePath))
@@ -166,11 +214,11 @@ namespace Kirgu.Shipping.API
                 Count = FS.Read(Buffer, 0, Buffer.Length);
                 // И передаем их клиенту
                 Client.GetStream().Write(Buffer, 0, Count);
-            }
+            }*/
 
             // Закроем файл и соединение
-            FS.Close();
-            Client.Close();
+            /*FS.Close();
+            Client.Close();*/
         }
     }
 
