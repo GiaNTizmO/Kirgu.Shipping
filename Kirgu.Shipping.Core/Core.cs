@@ -1,6 +1,7 @@
 ﻿using Gamania.OmniLogger;
 using Kirgu.Shipping.API;
 using Kirgu.Shipping.Config;
+using Kirgu.Shipping.MongoDBManager;
 using System;
 using System.Net;
 using System.Threading;
@@ -19,21 +20,11 @@ namespace Kirgu.Shipping.Core
 
             Logger.WriteLine("Kirgu Shipping initializing...");
             Logger.WriteLine("Initializing HTTP API...");
-            RunRestApi();
+            var RestApiThread = new Thread(() => HttpServer.API_Main());
+            RestApiThread.Start();
             Logger.WriteLine("Initializing HTTP API... [OK]");
-        }
-
-        public static void RunRestApi()
-        {
-            try
-            {
-                var RestApiThread = new Thread(() => HttpServer.API_Main());
-                RestApiThread.Start();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-            }
+            var CheckDBExsists = new Thread(() => DBManager.Test());
+            CheckDBExsists.Start();
         }
     }
 }
