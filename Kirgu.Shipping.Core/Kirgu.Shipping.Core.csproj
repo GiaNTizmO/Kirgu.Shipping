@@ -1,19 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>netcoreapp3.1</TargetFramework>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Gamania.OmniLogger\Gamania.OmniLogger.csproj" />
-    <ProjectReference Include="..\Kirgu.Shipping.API\Kirgu.Shipping.API.csproj" />
-    <ProjectReference Include="..\Kirgu.Shipping.Config\Kirgu.Shipping.Config.csproj" />
-    <ProjectReference Include="..\Kirgu.Shipping.MongoDBManager\Kirgu.Shipping.MongoDBManager.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Gamania.OmniLogger\Gamania.OmniLogger.csproj" />
+		<ProjectReference Include="..\Kirgu.Shipping.API\Kirgu.Shipping.API.csproj" />
+		<ProjectReference Include="..\Kirgu.Shipping.Config\Kirgu.Shipping.Config.csproj" />
+		<ProjectReference Include="..\Kirgu.Shipping.MongoDBManager\Kirgu.Shipping.MongoDBManager.csproj" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Items\" />
-  </ItemGroup>
-
+	<ItemGroup>
+		<Folder Include="Items\" />
+	</ItemGroup>
 </Project>

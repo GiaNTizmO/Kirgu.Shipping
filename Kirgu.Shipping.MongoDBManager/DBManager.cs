@@ -23,17 +23,30 @@ namespace Kirgu.Shipping.MongoDBManager
                 }, { "class_id", 480 }
         };
 
-            var find = new BsonDocument { { "student_id", 10000 }
+            var find = new BsonDocument { { "orderId", "Z-201207" }
         };
-            var db = client.GetDatabase("testDatabase");
-            var collection = db.GetCollection<BsonDocument>("testCollection");
-            collection.InsertOne(document);
 
-            Console.WriteLine(collection.Find(document));
+            var db = client.GetDatabase("Kirgu");
+            var collection = db.GetCollection<BsonDocument>("orders");
+            //collection.InsertOne(document);
+            var resultFind = collection.Find(find).ToList();
+            Console.WriteLine(resultFind[0]);
         }
 
-        public static void FindCollection()
+        public static string FindCollection(string row, string value, string CollectionName, string DatabaseName)
         {
+            var db = client.GetDatabase(DatabaseName);
+            var collection = db.GetCollection<BsonDocument>(CollectionName);
+            var find = new BsonDocument { { "orderId", "Z-201207" } };
+            return collection.Find(find).ToList().ToString();
+        }
+
+        public static string FindCollection(string row, int value, string CollectionName, string DatabaseName)
+        {
+            var db = client.GetDatabase(DatabaseName);
+            var collection = db.GetCollection<BsonDocument>(CollectionName);
+            var find = new BsonDocument { { row, value } };
+            return collection.Find(find).ToList().ToJson();
         }
     }
 }

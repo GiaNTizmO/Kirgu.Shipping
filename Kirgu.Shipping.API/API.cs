@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Gamania.OmniLogger;
+using System;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
@@ -7,24 +8,14 @@ namespace Kirgu.Shipping.API
 {
     public static class HttpServer
     {
+        public static string[] credentials = new string[2];
         public static HttpListener listener;
         public static string url = "http://" + Config.Config.Server_RestApi_BindingAddress + ":" + Config.Config.Server_RestApi_BindingPort + "/";
         public static int pageViews = 0;
         public static int requestCount = 0;
 
-        public static string pageData =
-            "<!DOCTYPE>" +
-            "<html>" +
-            "  <head>" +
-            "    <title>HttpListener Example</title>" +
-            "  </head>" +
-            "  <body>" +
-            "    <p>Page Views: {0}</p>" +
-            "    <form method=\"post\" action=\"shutdown\">" +
-            "      <input type=\"submit\" value=\"Shutdown\" {1}>" +
-            "    </form>" +
-            "  </body>" +
-            "</html>";
+        //public static string pageRaw = "{\"Status\"}";
+        public static string pageData = "false";
 
         public static async Task HandleIncomingConnections()
         {
@@ -40,6 +31,7 @@ namespace Kirgu.Shipping.API
                 HttpListenerRequest req = ctx.Request;
                 HttpListenerResponse resp = ctx.Response;
 
+#if Debug
                 // Print out some info about the request
                 Console.WriteLine("Request #: {0}", ++requestCount);
                 Console.WriteLine(req.Url.ToString());
@@ -54,10 +46,15 @@ namespace Kirgu.Shipping.API
                     Console.WriteLine("Shutdown requested");
                     runServer = false;
                 }
+#endif
 
-                // Make sure we don't increment the page views counter if `favicon.ico` is requested
-                if (req.Url.AbsolutePath != "/favicon.ico")
-                    pageViews += 1;
+                if ((req.HttpMethod == "GET") && (req.Url.AbsolutePath.Contains("/auth=")))
+                {
+                    Logger.WriteLine("Auth packet recieved!");
+                    Console.WriteLine(req.Url.AbsolutePath);
+                    AuthParser(req.Url.AbsolutePath);
+                    Console.WriteLine(credentials[0] + credentials[1]);
+                }
 
                 // Write the response info
                 string disableSubmit = !runServer ? "disabled" : "";
@@ -86,6 +83,16 @@ namespace Kirgu.Shipping.API
 
             // Close the listener
             listener.Close();
+        }
+
+        public static string[] AuthParser(string authStr)
+        {
+            string[] Raw = authStr.Split('&');
+            string[] Login = Raw[0].Split('=');
+            string[] Password = Raw[1].Split('=');
+            credentials[0] = Login[1];
+            credentials[1] = Password[1];
+            return credentials;
         }
     }
 }

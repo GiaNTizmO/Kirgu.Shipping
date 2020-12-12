@@ -25,6 +25,8 @@ namespace Kirgu.Shipping.Core
             Logger.WriteLine("Initializing HTTP API... [OK]");
             var CheckDBExsists = new Thread(() => DBManager.Test());
             CheckDBExsists.Start();
+
+            //Console.WriteLine(DBManager.FindCollection("orderId", "Z-201207", "orders", "Kirgu"));
         }
     }
 }
