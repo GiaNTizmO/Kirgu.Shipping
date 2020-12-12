@@ -8,5 +8,6 @@
 	<ItemGroup>
 		<ProjectReference Include="..\Gamania.OmniLogger\Gamania.OmniLogger.csproj" />
 		<ProjectReference Include="..\Kirgu.Shipping.Config\Kirgu.Shipping.Config.csproj" />
+		<ProjectReference Include="..\Kirgu.Shipping.MongoDBManager\Kirgu.Shipping.MongoDBManager.csproj" />
 	</ItemGroup>
 </Project>

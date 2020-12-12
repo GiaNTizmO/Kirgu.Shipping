@@ -3,6 +3,8 @@ using System;
 using Kirgu.Shipping.Config;
 using System.Threading.Tasks;
 using MongoDB.Bson;
+using Newtonsoft.Json.Linq;
+using MongoDB.Bson.IO;
 
 namespace Kirgu.Shipping.MongoDBManager
 {
@@ -33,20 +35,32 @@ namespace Kirgu.Shipping.MongoDBManager
             Console.WriteLine(resultFind[0]);
         }
 
-        public static string FindCollection(string row, string value, string CollectionName, string DatabaseName)
+        public static int AuthProcessor(string username, string password)
         {
-            var db = client.GetDatabase(DatabaseName);
-            var collection = db.GetCollection<BsonDocument>(CollectionName);
-            var find = new BsonDocument { { "orderId", "Z-201207" } };
-            return collection.Find(find).ToList().ToString();
-        }
+            var find = new BsonDocument { { "login", username }
+        };
+            var db = client.GetDatabase("Kirgu");
+            var collection = db.GetCollection<BsonDocument>("accounts");
 
-        public static string FindCollection(string row, int value, string CollectionName, string DatabaseName)
-        {
-            var db = client.GetDatabase(DatabaseName);
-            var collection = db.GetCollection<BsonDocument>(CollectionName);
-            var find = new BsonDocument { { row, value } };
-            return collection.Find(find).ToList().ToJson();
+            var resultFind = collection.Find(find).ToList();
+            long count = collection.Count(find);
+            Console.WriteLine(count);
+            if (count > 0)
+            {
+                var jsonWriterSettings = new JsonWriterSettings { OutputMode = JsonOutputMode.Strict };
+                JObject json = JObject.Parse(resultFind[0].ToJson<MongoDB.Bson.BsonDocument>(jsonWriterSettings));
+
+                Console.WriteLine(json);
+                dynamic authJSON = Newtonsoft.Json.JsonConvert.DeserializeObject(json.ToString());
+                Console.WriteLine(authJSON.password);
+                if (authJSON.password == password)
+                    return 2; //VALID USER
+                else
+                    return 1; //INCORRECT PASSWORD
+            }
+            else
+                return 0; //USER NOT FOUND
+            return -1; //SERVER ERROR
         }
     }
 }

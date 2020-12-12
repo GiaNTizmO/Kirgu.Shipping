@@ -1,4 +1,5 @@
 ﻿using Gamania.OmniLogger;
+using Kirgu.Shipping.MongoDBManager;
 using System;
 using System.IO;
 using System.Net;
@@ -47,7 +48,8 @@ namespace Kirgu.Shipping.API
                     Html = "{\"success\" : false , \"message\" : \"" + msg + "\"}";
                 }
             }
-            Html = "{\"success\" : true , " + msg + "\"}";
+            else
+                Html = "{\"success\" : true , \"" + msg + "\"}";
             // Необходимые заголовки: ответ сервера, тип и длина содержимого. После двух пустых строк - само содержимое
             string Str = "HTTP/1.1 " + "200" + "\nContent-type: application/json\nContent-Length:" + Html.Length.ToString() + "\n\n" + Html;
             // Приведем строку к виду массива байт
@@ -133,9 +135,24 @@ namespace Kirgu.Shipping.API
             {
                 Logger.WriteLine("Auth packet recieved!");
                 AuthParser(RequestUri);
-                Send(Client, "Hello " + credentials[0], true);
+                int AuthState = DBManager.AuthProcessor(credentials[0], credentials[1]);
+                Console.WriteLine("AuthState is: " + AuthState);
+                if (AuthState == 2)
+                    Send(Client, "Hello " + credentials[0], true);
+                else if (AuthState == 1)
+                    Send(Client, "Incorrect password!", false);
+                else if (AuthState == 0)
+                    Send(Client, "User not found!", false);
+                else if (AuthState == 0)
+                    Send(Client, "Server error!", false);
+                else
+                    Send(Client, "Server error!", false);
             }
-
+            else
+            {
+                Send(Client, "Unknown Route! (Route not found in router)", false);
+            }
+            //---   ROUTER END  ---//
             /*string FilePath = "www/" + RequestUri;
 
             // Если в папке www не существует данного файла, посылаем ошибку 404
