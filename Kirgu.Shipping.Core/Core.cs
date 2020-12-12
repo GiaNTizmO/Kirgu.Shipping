@@ -11,9 +11,9 @@ namespace Kirgu.Shipping.Core
         private static void Main(string[] args)
         {
             //------------------------
-            ServicePointManager.DefaultConnectionLimit = 1024;
-            ThreadPool.SetMinThreads(128, 256);
-            ThreadPool.SetMaxThreads(128, 256);
+            ServicePointManager.DefaultConnectionLimit = Config.Server_ConnectionLimit;
+            ThreadPool.SetMinThreads(Config.Server_Min_Worker_Threads, Config.Server_Min_Worker_completionPortThreads);
+            ThreadPool.SetMaxThreads(Config.Server_Max_Worker_Threads, Config.Server_Max_Worker_completionPortThreads);
             //------------------------
 
             Logger.WriteLine("Kirgu Shipping initializing...");
