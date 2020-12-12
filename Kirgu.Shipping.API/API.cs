@@ -8,7 +8,7 @@ namespace Kirgu.Shipping.API
     public static class HttpServer
     {
         public static HttpListener listener;
-        public static string url = "http://localhost:8000/";
+        public static string url = "http://" + Config.Config.Server_RestApi_BindingAddress + ":" + Config.Config.Server_RestApi_BindingPort + "/";
         public static int pageViews = 0;
         public static int requestCount = 0;
 

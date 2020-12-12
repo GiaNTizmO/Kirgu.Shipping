@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Kirgu.Shipping.Core\Kirgu.Shipping.Core.csproj" />
+    <ProjectReference Include="..\Kirgu.Shipping.Config\Kirgu.Shipping.Config.csproj" />
   </ItemGroup>
 
 </Project>

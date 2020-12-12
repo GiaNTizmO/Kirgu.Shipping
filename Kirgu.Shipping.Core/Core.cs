@@ -1,5 +1,6 @@
 ﻿using Gamania.OmniLogger;
 using Kirgu.Shipping.API;
+using Kirgu.Shipping.Config;
 using System;
 using System.Net;
 using System.Threading;
@@ -11,9 +12,9 @@ namespace Kirgu.Shipping.Core
         private static void Main(string[] args)
         {
             //------------------------
-            ServicePointManager.DefaultConnectionLimit = Config.Server_ConnectionLimit;
-            ThreadPool.SetMinThreads(Config.Server_Min_Worker_Threads, Config.Server_Min_Worker_completionPortThreads);
-            ThreadPool.SetMaxThreads(Config.Server_Max_Worker_Threads, Config.Server_Max_Worker_completionPortThreads);
+            ServicePointManager.DefaultConnectionLimit = Config.Config.Server_ConnectionLimit;
+            ThreadPool.SetMinThreads(Config.Config.Server_Min_Worker_Threads, Config.Config.Server_Min_Worker_completionPortThreads);
+            ThreadPool.SetMaxThreads(Config.Config.Server_Max_Worker_Threads, Config.Config.Server_Max_Worker_completionPortThreads);
             //------------------------
 
             Logger.WriteLine("Kirgu Shipping initializing...");

@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kirgu.Shipping.UnitTests", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kirgu.Shipping.MongoDBManager", "Kirgu.Shipping.MongoDBManager\Kirgu.Shipping.MongoDBManager.csproj", "{1CCF6E9F-B154-4CAD-9878-FD6B4CD0F497}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kirgu.Shipping.Config", "Kirgu.Shipping.Config\Kirgu.Shipping.Config.csproj", "{2072CD0A-BFFA-4EBE-8F33-909D48D575E8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{1CCF6E9F-B154-4CAD-9878-FD6B4CD0F497}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1CCF6E9F-B154-4CAD-9878-FD6B4CD0F497}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1CCF6E9F-B154-4CAD-9878-FD6B4CD0F497}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2072CD0A-BFFA-4EBE-8F33-909D48D575E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2072CD0A-BFFA-4EBE-8F33-909D48D575E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2072CD0A-BFFA-4EBE-8F33-909D48D575E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2072CD0A-BFFA-4EBE-8F33-909D48D575E8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

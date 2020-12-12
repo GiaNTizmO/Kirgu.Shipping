@@ -8,6 +8,11 @@
   <ItemGroup>
     <ProjectReference Include="..\Gamania.OmniLogger\Gamania.OmniLogger.csproj" />
     <ProjectReference Include="..\Kirgu.Shipping.API\Kirgu.Shipping.API.csproj" />
+    <ProjectReference Include="..\Kirgu.Shipping.Config\Kirgu.Shipping.Config.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Items\" />
   </ItemGroup>
 
 </Project>
