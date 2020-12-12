@@ -20,7 +20,7 @@ namespace Kirgu.Shipping.Core
 
             Logger.WriteLine("Kirgu Shipping initializing...");
             Logger.WriteLine("Initializing HTTP API...");
-            var RestApiThread = new Thread(() => HttpServer.API_Main());
+            var RestApiThread = new Thread(() => Server.API_Main());
             RestApiThread.Start();
             Logger.WriteLine("Initializing HTTP API... [OK]");
             var CheckDBExsists = new Thread(() => DBManager.Test());

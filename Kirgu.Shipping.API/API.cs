@@ -1,98 +1,219 @@
 ﻿using Gamania.OmniLogger;
 using System;
+using System.IO;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Kirgu.Shipping.API
 {
-    public static class HttpServer
+    // Класс-обработчик клиента
+    internal class Client
     {
-        public static string[] credentials = new string[2];
-        public static HttpListener listener;
-        public static string url = "http://" + Config.Config.Server_RestApi_BindingAddress + ":" + Config.Config.Server_RestApi_BindingPort + "/";
-        public static int pageViews = 0;
-        public static int requestCount = 0;
-
-        //public static string pageRaw = "{\"Status\"}";
-        public static string pageData = "false";
-
-        public static async Task HandleIncomingConnections()
+        // Отправка страницы с ошибкой
+        private void SendError(TcpClient Client, int Code)
         {
-            bool runServer = true;
+            // Получаем строку вида "200 OK"
+            // HttpStatusCode хранит в себе все статус-коды HTTP/1.1
+            string CodeStr = Code.ToString() + " " + ((HttpStatusCode)Code).ToString();
+            // Код простой HTML-странички
+            string Html = "<html><body><h1>" + CodeStr + "</h1></body></html>";
+            // Необходимые заголовки: ответ сервера, тип и длина содержимого. После двух пустых строк - само содержимое
+            string Str = "HTTP/1.1 " + CodeStr + "\nContent-type: application/json\nContent-Length:" + Html.Length.ToString() + "\n\n" + Html;
+            // Приведем строку к виду массива байт
+            byte[] Buffer = Encoding.ASCII.GetBytes(Str);
+            // Отправим его клиенту
+            Client.GetStream().Write(Buffer, 0, Buffer.Length);
+            // Закроем соединение
+            Client.Close();
+        }
 
-            // While a user hasn't visited the `shutdown` url, keep on handling requests
-            while (runServer)
+        // Конструктор класса. Ему нужно передавать принятого клиента от TcpListener
+        public Client(TcpClient Client)
+        {
+            // Объявим строку, в которой будет хранится запрос клиента
+            string Request = "";
+            // Буфер для хранения принятых от клиента данных
+            byte[] Buffer = new byte[1024];
+            // Переменная для хранения количества байт, принятых от клиента
+            int Count;
+            // Читаем из потока клиента до тех пор, пока от него поступают данные
+            while ((Count = Client.GetStream().Read(Buffer, 0, Buffer.Length)) > 0)
             {
-                // Will wait here until we hear from a connection
-                HttpListenerContext ctx = await listener.GetContextAsync();
-
-                // Peel out the requests and response objects
-                HttpListenerRequest req = ctx.Request;
-                HttpListenerResponse resp = ctx.Response;
-
-#if Debug
-                // Print out some info about the request
-                Console.WriteLine("Request #: {0}", ++requestCount);
-                Console.WriteLine(req.Url.ToString());
-                Console.WriteLine(req.HttpMethod);
-                Console.WriteLine(req.UserHostName);
-                Console.WriteLine(req.UserAgent);
-                Console.WriteLine();
-
-                // If `shutdown` url requested w/ POST, then shutdown the server after serving the page
-                if ((req.HttpMethod == "POST") && (req.Url.AbsolutePath == "/shutdown"))
+                // Преобразуем эти данные в строку и добавим ее к переменной Request
+                Request += Encoding.ASCII.GetString(Buffer, 0, Count);
+                // Запрос должен обрываться последовательностью \r\n\r\n
+                // Либо обрываем прием данных сами, если длина строки Request превышает 4 килобайта
+                // Нам не нужно получать данные из POST-запроса (и т. п.), а обычный запрос
+                // по идее не должен быть больше 4 килобайт
+                if (Request.IndexOf("\r\n\r\n") >= 0 || Request.Length > 4096)
                 {
-                    Console.WriteLine("Shutdown requested");
-                    runServer = false;
+                    break;
                 }
-#endif
+            }
 
-                if ((req.HttpMethod == "GET") && (req.Url.AbsolutePath.Contains("/auth=")))
-                {
-                    Logger.WriteLine("Auth packet recieved!");
-                    Console.WriteLine(req.Url.AbsolutePath);
-                    AuthParser(req.Url.AbsolutePath);
-                    Console.WriteLine(credentials[0] + credentials[1]);
-                }
+            // Парсим строку запроса с использованием регулярных выражений
+            // При этом отсекаем все переменные GET-запроса
+            Match ReqMatch = Regex.Match(Request, @"^\w+\s+([^\s\?]+)[^\s]*\s+HTTP/.*|");
 
-                // Write the response info
-                string disableSubmit = !runServer ? "disabled" : "";
-                byte[] data = Encoding.UTF8.GetBytes(String.Format(pageData, pageViews, disableSubmit));
-                resp.ContentType = "text/html";
-                resp.ContentEncoding = Encoding.UTF8;
-                resp.ContentLength64 = data.LongLength;
+            // Если запрос не удался
+            if (ReqMatch == Match.Empty)
+            {
+                // Передаем клиенту ошибку 400 - неверный запрос
+                SendError(Client, 400);
+                return;
+            }
 
-                // Write out to the response stream (asynchronously), then close it
-                await resp.OutputStream.WriteAsync(data, 0, data.Length);
-                resp.Close();
+            // Получаем строку запроса
+            string RequestUri = ReqMatch.Groups[1].Value;
+
+            // Приводим ее к изначальному виду, преобразуя экранированные символы
+            // Например, "%20" -> " "
+            RequestUri = Uri.UnescapeDataString(RequestUri);
+
+            // Если в строке содержится двоеточие, передадим ошибку 400
+            // Это нужно для защиты от URL типа http://example.com/../../file.txt
+            if (RequestUri.IndexOf("..") >= 0)
+            {
+                SendError(Client, 400);
+                return;
+            }
+
+            // Если строка запроса оканчивается на "/", то добавим к ней index.html
+            if (RequestUri.EndsWith("/"))
+            {
+                RequestUri += "index.html";
+            }
+
+            string FilePath = "www/" + RequestUri;
+
+            // Если в папке www не существует данного файла, посылаем ошибку 404
+            if (!File.Exists(FilePath))
+            {
+                SendError(Client, 404);
+                return;
+            }
+
+            // Получаем расширение файла из строки запроса
+            string Extension = RequestUri.Substring(RequestUri.LastIndexOf('.'));
+
+            // Тип содержимого
+            string ContentType = "";
+
+            // Пытаемся определить тип содержимого по расширению файла
+            switch (Extension)
+            {
+                case ".htm":
+                case ".html":
+                    ContentType = "text/html";
+                    break;
+
+                case ".css":
+                    ContentType = "text/stylesheet";
+                    break;
+
+                case ".js":
+                    ContentType = "text/javascript";
+                    break;
+
+                case ".jpg":
+                    ContentType = "image/jpeg";
+                    break;
+
+                case ".jpeg":
+                case ".png":
+                case ".gif":
+                    ContentType = "image/" + Extension.Substring(1);
+                    break;
+
+                default:
+                    if (Extension.Length > 1)
+                    {
+                        ContentType = "application/" + Extension.Substring(1);
+                    }
+                    else
+                    {
+                        ContentType = "application/unknown";
+                    }
+                    break;
+            }
+
+            // Открываем файл, страхуясь на случай ошибки
+            FileStream FS;
+            try
+            {
+                FS = new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            }
+            catch (Exception)
+            {
+                // Если случилась ошибка, посылаем клиенту ошибку 500
+                SendError(Client, 500);
+                return;
+            }
+
+            // Посылаем заголовки
+            string Headers = "HTTP/1.1 200 OK\nContent-Type: " + ContentType + "\nContent-Length: " + FS.Length + "\n\n";
+            byte[] HeadersBuffer = Encoding.ASCII.GetBytes(Headers);
+            Client.GetStream().Write(HeadersBuffer, 0, HeadersBuffer.Length);
+
+            // Пока не достигнут конец файла
+            while (FS.Position < FS.Length)
+            {
+                // Читаем данные из файла
+                Count = FS.Read(Buffer, 0, Buffer.Length);
+                // И передаем их клиенту
+                Client.GetStream().Write(Buffer, 0, Count);
+            }
+
+            // Закроем файл и соединение
+            FS.Close();
+            Client.Close();
+        }
+    }
+
+    public class Server
+    {
+        private TcpListener Listener; // Объект, принимающий TCP-клиентов
+
+        // Запуск сервера
+        public Server(int Port)
+        {
+            Listener = new TcpListener(IPAddress.Any, Port); // Создаем "слушателя" для указанного порта
+            Listener.Start(); // Запускаем его
+
+            // В бесконечном цикле
+            while (true)
+            {
+                // Принимаем новых клиентов. После того, как клиент был принят, он передается в новый поток (ClientThread)
+                // с использованием пула потоков.
+                ThreadPool.QueueUserWorkItem(new WaitCallback(ClientThread), Listener.AcceptTcpClient());
+            }
+        }
+
+        private static void ClientThread(Object StateInfo)
+        {
+            // Просто создаем новый экземпляр класса Client и передаем ему приведенный к классу TcpClient объект StateInfo
+            new Client((TcpClient)StateInfo);
+        }
+
+        // Остановка сервера
+        ~Server()
+        {
+            // Если "слушатель" был создан
+            if (Listener != null)
+            {
+                // Остановим его
+                Listener.Stop();
             }
         }
 
         public static void API_Main()
         {
-            // Create a Http server and start listening for incoming connections
-            listener = new HttpListener();
-            listener.Prefixes.Add(url);
-            listener.Start();
-            Console.WriteLine("Listening for connections on {0}", url);
-
-            // Handle requests
-            Task listenTask = HandleIncomingConnections();
-            listenTask.GetAwaiter().GetResult();
-
-            // Close the listener
-            listener.Close();
-        }
-
-        public static string[] AuthParser(string authStr)
-        {
-            string[] Raw = authStr.Split('&');
-            string[] Login = Raw[0].Split('=');
-            string[] Password = Raw[1].Split('=');
-            credentials[0] = Login[1];
-            credentials[1] = Password[1];
-            return credentials;
+            // Создадим новый сервер на порту 80
+            new Server(80);
         }
     }
 }
