@@ -13,6 +13,7 @@ namespace Kirgu.Shipping.MongoDBManager
     public class DBManager
     {
         public static MongoClient client = new MongoClient("mongodb+srv://MongoKirguUser:LAKRtLdNXekf8zuS@cluster0.afxq4.mongodb.net/");
+        public static string HardJsonValue = "";
 
         public static void Test()
         {
@@ -32,7 +33,6 @@ namespace Kirgu.Shipping.MongoDBManager
 
             var db = client.GetDatabase("Kirgu");
             var collection = db.GetCollection<BsonDocument>("orders");
-            //collection.InsertOne(document);
             var resultFind = collection.Find(find).ToList();
             Console.WriteLine(resultFind[0]);
         }
@@ -89,13 +89,10 @@ namespace Kirgu.Shipping.MongoDBManager
                     string url = "https://smsc.ru/sys/send.php?login=<login>&psw=<password>&phones=" + authJSON.phone + "&mes=Новый пароль от аккаунта Киргу:";
                     using (var webClient = new WebClient())
                     {
-                        // Выполняем запрос по адресу и получаем ответ в виде строки
                         var response = webClient.DownloadString(url);
                     }
                     Console.WriteLine(newpasswd);
-                    // параметр фильтрации
                     var filter = Builders<BsonDocument>.Filter.Eq("login", username);
-                    // параметр обновления
                     var update = Builders<BsonDocument>.Update.Set("password", newpasswd);
                     var result = collection.UpdateOne(filter, update);
                     return 2; //VALID USER
@@ -120,7 +117,32 @@ namespace Kirgu.Shipping.MongoDBManager
             return res.ToString();
         }
 
-        public static int GetOrders(string username)
+        public static string GetOrders(string username)
+        {
+            var find = new BsonDocument { { "accountID", ObjectId(GetAccountOID(username)) }
+        };
+            var db = client.GetDatabase("Kirgu");
+            var collection = db.GetCollection<BsonDocument>("orders");
+
+            var resultFind = collection.Find(find).ToList();
+            long count = collection.Count(find);
+            Console.WriteLine(count);
+            if (count > 0)
+            {
+                var jsonWriterSettings = new JsonWriterSettings { OutputMode = JsonOutputMode.Strict };
+                JObject json = JObject.Parse(resultFind[0].ToJson<MongoDB.Bson.BsonDocument>(jsonWriterSettings));
+
+                Console.WriteLine("LOL1: " + json);
+                JObject authJSON = (JObject)Newtonsoft.Json.JsonConvert.DeserializeObject(json.ToString());
+                string Account_ObjectId = authJSON["_id"].Value<string>("$oid");
+                Console.WriteLine("LOL2: " + Account_ObjectId.ToString());
+            }
+            else
+                return 0; //USER NOT FOUND
+            return -1; //SERVER ERROR
+        }
+
+        public static string GetAccountOID(string username)
         {
             var find = new BsonDocument { { "login", username }
         };
@@ -134,17 +156,12 @@ namespace Kirgu.Shipping.MongoDBManager
             {
                 var jsonWriterSettings = new JsonWriterSettings { OutputMode = JsonOutputMode.Strict };
                 JObject json = JObject.Parse(resultFind[0].ToJson<MongoDB.Bson.BsonDocument>(jsonWriterSettings));
-
-                Console.WriteLine(json);
-                dynamic authJSON = Newtonsoft.Json.JsonConvert.DeserializeObject(json.ToString());
-                Console.WriteLine(authJSON._id);
-                dynamic accountOID = Newtonsoft.Json.JsonConvert.DeserializeObject(authJSON._id);
-
-                Console.WriteLine(accountOID.$oid);
+                JObject authJSON = (JObject)Newtonsoft.Json.JsonConvert.DeserializeObject(json.ToString());
+                string Account_ObjectId = authJSON["_id"].Value<string>("$oid");
+                return Account_ObjectId;
             }
             else
-                return 0; //USER NOT FOUND
-            return -1; //SERVER ERROR
+                return null; //SERVER ERROR
         }
     }
 }
