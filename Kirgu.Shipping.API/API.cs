@@ -15,6 +15,7 @@ namespace Kirgu.Shipping.API
     internal class Client
     {
         public static string[] credentials = new string[2];
+        public static string[] authlogin = new string[1];
 
         // Отправка страницы с ошибкой
         private void SendError(TcpClient Client, int Code)
@@ -68,6 +69,13 @@ namespace Kirgu.Shipping.API
             credentials[0] = Login[1];
             credentials[1] = Password[1];
             return credentials;
+        }
+
+        public static string[] LoginParser(string authStr)
+        {
+            string[] Raw = authStr.Split('=');
+            authlogin[0] = Raw[1];
+            return authlogin;
         }
 
         // Конструктор класса. Ему нужно передавать принятого клиента от TcpListener
@@ -143,7 +151,41 @@ namespace Kirgu.Shipping.API
                     Send(Client, "Incorrect password!", false);
                 else if (AuthState == 0)
                     Send(Client, "User not found!", false);
+                else if (AuthState == -1)
+                    Send(Client, "Server error!", false);
+                else
+                    Send(Client, "Server error!", false);
+            }
+            else if (RequestUri.StartsWith("/recover="))
+            {
+                Logger.WriteLine("Recovery password packet recieved!");
+                AuthParser(RequestUri);
+                int AuthState = DBManager.AuthRecoveryProcessor(credentials[0], credentials[1]);
+                Console.WriteLine("AuthRecoveryState is: " + AuthState);
+                if (AuthState == 2)
+                    Send(Client, "New password was sent to linked phone number: " + credentials[1], true);
+                else if (AuthState == 1)
+                    Send(Client, "Incorrect phone!", false);
                 else if (AuthState == 0)
+                    Send(Client, "User not found!", false);
+                else if (AuthState == -1)
+                    Send(Client, "Server error!", false);
+                else
+                    Send(Client, "Server error!", false);
+            }
+            else if (RequestUri.StartsWith("/orders="))
+            {
+                Logger.WriteLine("Recovery password packet recieved!");
+                LoginParser(RequestUri);
+                int AuthState = DBManager.GetOrders(authlogin[0]);
+                Console.WriteLine("GetOrdersState is: " + AuthState);
+                if (AuthState == 2)
+                    Send(Client, "New password was sent to linked phone number: " + credentials[1], true);
+                else if (AuthState == 1)
+                    Send(Client, "Incorrect phone!", false);
+                else if (AuthState == 0)
+                    Send(Client, "User not found!", false);
+                else if (AuthState == -1)
                     Send(Client, "Server error!", false);
                 else
                     Send(Client, "Server error!", false);

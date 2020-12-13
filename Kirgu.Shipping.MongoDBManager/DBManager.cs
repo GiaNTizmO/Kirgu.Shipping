@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using MongoDB.Bson;
 using Newtonsoft.Json.Linq;
 using MongoDB.Bson.IO;
+using System.Net;
+using System.Text;
 
 namespace Kirgu.Shipping.MongoDBManager
 {
@@ -57,6 +59,88 @@ namespace Kirgu.Shipping.MongoDBManager
                     return 2; //VALID USER
                 else
                     return 1; //INCORRECT PASSWORD
+            }
+            else
+                return 0; //USER NOT FOUND
+            return -1; //SERVER ERROR
+        }
+
+        public static int AuthRecoveryProcessor(string username, string phone)
+        {
+            var find = new BsonDocument { { "login", username }
+        };
+            var db = client.GetDatabase("Kirgu");
+            var collection = db.GetCollection<BsonDocument>("accounts");
+
+            var resultFind = collection.Find(find).ToList();
+            long count = collection.Count(find);
+            Console.WriteLine(count);
+            if (count > 0)
+            {
+                var jsonWriterSettings = new JsonWriterSettings { OutputMode = JsonOutputMode.Strict };
+                JObject json = JObject.Parse(resultFind[0].ToJson<MongoDB.Bson.BsonDocument>(jsonWriterSettings));
+
+                Console.WriteLine(json);
+                dynamic authJSON = Newtonsoft.Json.JsonConvert.DeserializeObject(json.ToString());
+                Console.WriteLine(authJSON.password);
+                if (authJSON.phone == phone)
+                {
+                    string newpasswd = CreatePassword(8);
+                    string url = "https://smsc.ru/sys/send.php?login=<login>&psw=<password>&phones=" + authJSON.phone + "&mes=Новый пароль от аккаунта Киргу:";
+                    using (var webClient = new WebClient())
+                    {
+                        // Выполняем запрос по адресу и получаем ответ в виде строки
+                        var response = webClient.DownloadString(url);
+                    }
+                    Console.WriteLine(newpasswd);
+                    // параметр фильтрации
+                    var filter = Builders<BsonDocument>.Filter.Eq("login", username);
+                    // параметр обновления
+                    var update = Builders<BsonDocument>.Update.Set("password", newpasswd);
+                    var result = collection.UpdateOne(filter, update);
+                    return 2; //VALID USER
+                }
+                else
+                    return 1; //INCORRECT PHONE
+            }
+            else
+                return 0; //USER NOT FOUND
+            return -1; //SERVER ERROR
+        }
+
+        public static string CreatePassword(int length)
+        {
+            const string valid = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+            StringBuilder res = new StringBuilder();
+            Random rnd = new Random();
+            while (0 < length--)
+            {
+                res.Append(valid[rnd.Next(valid.Length)]);
+            }
+            return res.ToString();
+        }
+
+        public static int GetOrders(string username)
+        {
+            var find = new BsonDocument { { "login", username }
+        };
+            var db = client.GetDatabase("Kirgu");
+            var collection = db.GetCollection<BsonDocument>("accounts");
+
+            var resultFind = collection.Find(find).ToList();
+            long count = collection.Count(find);
+            Console.WriteLine(count);
+            if (count > 0)
+            {
+                var jsonWriterSettings = new JsonWriterSettings { OutputMode = JsonOutputMode.Strict };
+                JObject json = JObject.Parse(resultFind[0].ToJson<MongoDB.Bson.BsonDocument>(jsonWriterSettings));
+
+                Console.WriteLine(json);
+                dynamic authJSON = Newtonsoft.Json.JsonConvert.DeserializeObject(json.ToString());
+                Console.WriteLine(authJSON._id);
+                dynamic accountOID = Newtonsoft.Json.JsonConvert.DeserializeObject(authJSON._id);
+
+                Console.WriteLine(accountOID.$oid);
             }
             else
                 return 0; //USER NOT FOUND
